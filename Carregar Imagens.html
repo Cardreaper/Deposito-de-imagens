@@ -22,11 +22,6 @@
             color: #333;
         }
 
-        .button-container {
-            display: flex;
-            gap: 20px;
-        }
-
         button {
             padding: 15px 30px;
             font-size: 16px;
@@ -46,193 +41,217 @@
             background-color: #004080;
         }
 
-        .popup {
-            display: none;
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background-color: #fff;
-            border: 1px solid #ccc;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-            padding: 20px;
-            z-index: 1000;
-        }
-
-        .popup h2 {
-            margin: 0 0 15px;
-        }
-
-        .popup label {
-            display: block;
-            margin-bottom: 10px;
-        }
-
-        .popup input {
-            width: 100%;
-            padding: 8px;
-            margin-bottom: 15px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-        }
-
-        .popup button {
-            margin-right: 10px;
-        }
-
-        .overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 999;
-        }
-
-        #menuCatalogos {
+        .img-preview {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
             margin-top: 20px;
-            width: 80%;
-            max-width: 600px;
-            background-color: #fff;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            padding: 10px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
         }
 
-        #menuCatalogos ul {
+        .img-preview img {
+            max-width: 100px;
+            max-height: 100px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        .catalog-list {
+            margin-top: 20px;
             list-style: none;
             padding: 0;
         }
 
-        #menuCatalogos li {
+        .catalog-list li {
+            margin: 10px 0;
+        }
+
+        .catalog-list button {
             padding: 10px;
-            border-bottom: 1px solid #ccc;
+            font-size: 14px;
+            color: #fff;
+            background-color: #28a745;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
         }
 
-        #menuCatalogos li:last-child {
-            border-bottom: none;
+        .catalog-list button:hover {
+            background-color: #218838;
         }
 
-        #menuCatalogos a {
-            text-decoration: none;
-            color: #007bff;
-            transition: color 0.3s;
+        .file-input {
+            margin-top: 20px;
         }
 
-        #menuCatalogos a:hover {
-            color: #0056b3;
-        }
     </style>
 </head>
 <body>
     <h1>Depósito de Imagens</h1>
-    <div class="button-container">
-        <button onclick="abrirFormularioCriarCatalogo()">Criar Catálogo</button>
-        <button onclick="mostrarMenuCatalogos()">Menu de Catálogos</button>
-    </div>
+    <button onclick="criarCatalogo()">Criar Catálogo</button>
+    <button onclick="consultarCatalogos()">Consultar Catálogos</button>
 
-    <div class="overlay" id="overlay"></div>
-    <div class="popup" id="popupFormulario">
-        <h2>Criar Catálogo</h2>
-        <label for="titulo">Título:</label>
-        <input type="text" id="titulo" placeholder="Digite o título do catálogo">
-        <label for="observacoes">Observações:</label>
-        <input type="text" id="observacoes" placeholder="Digite as observações">
-        <button onclick="gravarCatalogo()">Gravar</button>
-        <button onclick="fecharPopup()">Cancelar</button>
-    </div>
-
-    <div class="popup" id="popupCarregarImagens">
-        <h2>Carregar Imagens</h2>
-        <input type="file" id="inputImagens" multiple accept="image/*">
-        <button onclick="uploadImagens()">Carregar</button>
-        <button onclick="fecharPopupCarregarImagens()">Cancelar</button>
-    </div>
-
-    <div id="menuCatalogos" style="display: none;">
-        <h2>Catálogos Disponíveis</h2>
-        <ul id="listaCatalogos"></ul>
-    </div>
+    <div class="img-preview" id="imgPreview"></div>
 
     <script>
-        const ACCESS_TOKEN = "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";
-        const REPO_OWNER = "Cardreaper";
-        const REPO_NAME = "Deposito-de-imagens";
-        const BRANCH = "main";
+        const GITHUB_API_URL = "https://api.github.com";
+        const REPO_OWNER = "Cardreaper"; // Substitua pelo dono do repositório
+        const REPO_NAME = "Deposito-de-imagens"; // Nome do repositório
+        const BRANCH = "main"; // Ramo onde salvar as imagens
+        const ACCESS_TOKEN = "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"; // Substitua pelo seu token de acesso
 
-        function abrirFormularioCriarCatalogo() {
-            document.getElementById('overlay').style.display = 'block';
-            document.getElementById('popupFormulario').style.display = 'block';
-        }
+        async function criarCatalogo() {
+            const catalogName = prompt("Digite o nome do catálogo:");
 
-        function fecharPopup() {
-            document.getElementById('overlay').style.display = 'none';
-            document.getElementById('popupFormulario').style.display = 'none';
-        }
-
-        async function gravarCatalogo() {
-            const titulo = document.getElementById('titulo').value.trim();
-            const observacoes = document.getElementById('observacoes').value.trim();
-
-            if (titulo === "" || observacoes === "") {
-                alert("Por favor, preencha todos os campos.");
-                return;
-            }
-
-            try {
-                // Criar pasta no repositório
-                const path = `imagens/${titulo}/.gitkeep`;
-                const response = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${path}`, {
-                    method: "PUT",
-                    headers: {
-                        "Authorization": `Bearer ${ACCESS_TOKEN}`,
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({
-                        message: `Criando catálogo ${titulo}`,
-                        content: btoa(""), // Arquivo vazio
-                        branch: BRANCH
-                    })
-                });
-
-                if (response.ok) {
-                    alert(`Catálogo '${titulo}' criado com sucesso!`);
-                    adicionarCatalogoMenu(titulo);
-                    fecharPopup();
-                    abrirPopupCarregarImagens(titulo);
+            if (catalogName) {
+                const catalogFolderCreated = await criarPastaNoRepo(catalogName);
+                if (catalogFolderCreated) {
+                    alert(`Catálogo "${catalogName}" criado com sucesso!`);
+                    abrirPopupImagens(catalogName);  // Exibe o pop-up para escolher as imagens
                 } else {
-                    console.error("Erro ao criar catálogo:", await response.json());
                     alert("Erro ao criar o catálogo. Tente novamente.");
                 }
-            } catch (error) {
-                console.error("Erro ao criar catálogo:", error);
-                alert("Erro ao criar o catálogo. Verifique sua conexão e tente novamente.");
             }
         }
 
-        function adicionarCatalogoMenu(titulo) {
-            const listaCatalogos = document.getElementById('listaCatalogos');
-            const li = document.createElement('li');
-            const link = document.createElement('a');
-            link.href = `#${titulo}`;
-            link.textContent = titulo;
-            li.appendChild(link);
-            listaCatalogos.appendChild(li);
+        async function criarPastaNoRepo(catalogName) {
+            const filePath = `${catalogName}/.empty`; // Criar um arquivo vazio para representar a pasta no GitHub
+            const url = `${GITHUB_API_URL}/repos/${REPO_OWNER}/${REPO_NAME}/contents/${filePath}`;
+
+            const response = await fetch(url, {
+                method: 'PUT',
+                headers: {
+                    Authorization: `Bearer ${ACCESS_TOKEN}`,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    message: `Criando pasta para o catálogo ${catalogName}`,
+                    content: "", // Arquivo vazio
+                    branch: BRANCH
+                })
+            });
+
+            return response.ok; // Retorna true se a criação foi bem-sucedida
         }
 
-        function mostrarMenuCatalogos() {
-            const menu = document.getElementById('menuCatalogos');
-            menu.style.display = 'block';
+        function abrirPopupImagens(catalogName) {
+            // Cria o input do tipo 'file' para selecionar as imagens
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.multiple = true;
+
+            // Quando o usuário selecionar as imagens, executa a função de carregamento
+            input.onchange = () => carregarImagens(catalogName, input.files);
+            input.click(); // Dispara o pop-up de seleção de arquivos
         }
 
-        function abrirPopupCarregarImagens(titulo) {
-            document.getElementById('popupCarregarImagens').style.display = 'block';
-            document.getElementById('overlay').style.display = 'block';
-            document.getElementById('popupCarregarImagens').dataset.titulo = titulo;
+        async function carregarImagens(catalogName, files) {
+            for (const file of files) {
+                const reader = new FileReader();
+                reader.onload = async function (e) {
+                    const base64Content = e.target.result.split(",")[1]; // Extraímos o conteúdo base64 da imagem
+                    await uploadImagem(catalogName, file.name, base64Content);
+                };
+                reader.readAsDataURL(file); // Lê o arquivo como base64
+            }
         }
 
-        function fecharPopupCarregarImagens() {
+        async function uploadImagem(catalogName, fileName, base64Content) {
+            const filePath = `${catalogName}/${fileName}`;
+            const url = `${GITHUB_API_URL}/repos/${REPO_OWNER}/${REPO_NAME}/contents/${filePath}`;
+
+            const response = await fetch(url, {
+                method: 'PUT',
+                headers: {
+                    Authorization: `Bearer ${ACCESS_TOKEN}`,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    message: `Adicionando imagem ${fileName} ao catálogo ${catalogName}`,
+                    content: base64Content,
+                    branch: BRANCH
+                })
+            });
+
+            if (response.ok) {
+                alert(`Imagem "${fileName}" carregada com sucesso no catálogo "${catalogName}"!`);
+            } else {
+                const error = await response.json();
+                alert(`Erro ao carregar "${fileName}": ${error.message}`);
+            }
+        }
+
+        async function consultarCatalogos() {
+            const catalogos = await listarCatalogos();
+            if (catalogos.length > 0) {
+                exibirCatalogos(catalogos);
+            } else {
+                alert("Nenhum catálogo encontrado.");
+            }
+        }
+
+        async function listarCatalogos() {
+            const url = `${GITHUB_API_URL}/repos/${REPO_OWNER}/${REPO_NAME}/contents/`;
+            const response = await fetch(url, {
+                headers: {
+                    Authorization: `Bearer ${ACCESS_TOKEN}`
+                }
+            });
+
+            const files = await response.json();
+            return files.filter(file => file.type === 'dir'); // Filtra apenas as pastas
+        }
+
+        function exibirCatalogos(catalogos) {
+            const catalogListContainer = document.createElement('ul');
+            catalogListContainer.classList.add('catalog-list');
+            document.body.appendChild(catalogListContainer);
+
+            catalogos.forEach(catalogo => {
+                const listItem = document.createElement('li');
+                const button = document.createElement('button');
+                button.textContent = catalogo.name;
+                button.onclick = () => abrirCatalogo(catalogo.name);
+                listItem.appendChild(button);
+                catalogListContainer.appendChild(listItem);
+            });
+        }
+
+        async function abrirCatalogo(catalogName) {
+            const catalogContent = await listarConteudoCatalogo(catalogName);
+            if (catalogContent.length > 0) {
+                exibirConteudoCatalogo(catalogName, catalogContent);
+            } else {
+                alert(`O catálogo "${catalogName}" está vazio.`);
+            }
+        }
+
+        async function listarConteudoCatalogo(catalogName) {
+            const url = `${GITHUB_API_URL}/repos/${REPO_OWNER}/${REPO_NAME}/contents/${catalogName}`;
+            const response = await fetch(url, {
+                headers: {
+                    Authorization: `Bearer ${ACCESS_TOKEN}`
+                }
+            });
+
+            return response.json();
+        }
+
+        function exibirConteudoCatalogo(catalogName, catalogContent) {
+            const contentContainer = document.createElement('div');
+            contentContainer.innerHTML = `<h2>Conteúdo do Catálogo: ${catalogName}</h2>`;
+            document.body.appendChild(contentContainer);
+
+            catalogContent.forEach(item => {
+                const itemElement = document.createElement('div');
+                itemElement.innerHTML = `
+                    <p><strong>${item.name}</strong></p>
+                    <p>URL: <a href="${item.download_url}" target="_blank">${item.download_url}</a></p>
+                    <hr>
+                `;
+                contentContainer.appendChild(itemElement);
+            });
+        }
+    </script>
+</body>
+</html>
