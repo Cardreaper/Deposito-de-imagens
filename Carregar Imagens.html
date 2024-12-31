@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Depósito de Imagens</title>
+    <style>
+        /* Estilos existentes */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+
+        h1 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .button-container {
+            display: flex;
+            gap: 20px;
+        }
+
+        button {
+            padding: 15px 30px;
+            font-size: 16px;
+            color: #fff;
+            background-color: #007bff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        button:active {
+            background-color: #004080;
+        }
+
+        .popup {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #fff;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            padding: 20px;
+            z-index: 1000;
+        }
+
+        .popup h2 {
+            margin: 0 0 15px;
+        }
+
+        .popup label {
+            display: block;
+            margin-bottom: 10px;
+        }
+
+        .popup input {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        .popup button {
+            margin-right: 10px;
+        }
+
+        .overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+        }
+
+        .img-preview {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .img-preview img {
+            max-width: 100px;
+            max-height: 100px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Depósito de Imagens</h1>
+    <div class="button-container" id="menuInicial">
+        <button onclick="abrirFormularioCriarCatalogo()">Criar Catálogo</button>
+        <button onclick="entrarMenuCatalogos()">Menu de Catálogos</button>
+    </div>
+
+    <div class="overlay" id="overlay"></div>
+
+    <!-- Formulário de criação do catálogo -->
+    <div class="popup" id="popupFormulario">
+        <h2>Criar Catálogo</h2>
+        <label for="titulo">Título:</label>
+        <input type="text" id="titulo" placeholder="Digite o título do catálogo">
+        <label for="observacoes">Observações:</label>
+        <input type="text" id="observacoes" placeholder="Digite as observações">
+        <button onclick="gravarCatalogo()">Gravar</button>
+        <button onclick="fecharPopup()">Cancelar</button>
+    </div>
+
+    <!-- Pop-up de carregamento de imagens -->
+    <div class="popup" id="popupCarregarImagens">
+        <h2>Carregar Imagens</h2>
+        <label for="inputImagens">Selecione as imagens:</label>
+        <input type="file" id="inputImagens" multiple accept="image/*" onchange="previewImagens()">
+        <div class="img-preview" id="imgPreview"></div>
+        <button onclick="finalizarCarregamento()">Carregar</button>
+        <button onclick="fecharPopup()">Cancelar</button>
+    </div>
+
+    <script>
+        function abrirFormularioCriarCatalogo() {
+            document.getElementById('menuInicial').style.display = 'none';
+            document.getElementById('overlay').style.display = 'block';
+            document.getElementById('popupFormulario').style.display = 'block';
+        }
+
+        function fecharPopup() {
+            document.getElementById('overlay').style.display = 'none';
+            document.querySelectorAll('.popup').forEach(popup => popup.style.display = 'none');
+            document.getElementById('menuInicial').style.display = 'flex';
+        }
+
+        function gravarCatalogo() {
+            const titulo = document.getElementById('titulo').value;
+            const observacoes = document.getElementById('observacoes').value;
+
+            if (titulo.trim() === "" || observacoes.trim() === "") {
+                alert("Por favor, preencha todos os campos.");
+                return;
+            }
+
+            alert(`Catálogo '${titulo}' gravado com sucesso!`);
+            document.getElementById('popupFormulario').style.display = 'none';
+            abrirPopupCarregarImagens(titulo);
+        }
+
+        function abrirPopupCarregarImagens(titulo) {
+            document.getElementById('popupCarregarImagens').style.display = 'block';
+            document.getElementById('overlay').style.display = 'block';
+        }
+
+        function previewImagens() {
+            const input = document.getElementById('inputImagens');
+            const previewContainer = document.getElementById('imgPreview');
+            previewContainer.innerHTML = "";
+
+            const files = input.files;
+            if (files.length > 0) {
+                Array.from(files).forEach(file => {
+                    const reader = new FileReader();
+                    reader.onload = function (e) {
+                        const img = document.createElement('img');
+                        img.src = e.target.result;
+                        previewContainer.appendChild(img);
+                    };
+                    reader.readAsDataURL(file);
+                });
+            }
+        }
+
+        function finalizarCarregamento() {
+            const input = document.getElementById('inputImagens');
+            const files = input.files;
+
+            if (files.length === 0) {
+                alert("Nenhuma imagem selecionada.");
+                return;
+            }
+
+            const nomesImagens = Array.from(files).map(file => file.name).join(", ");
+            alert(`Imagens carregadas com sucesso: ${nomesImagens}`);
+            fecharPopup();
+            // Adicione o catálogo ao menu de catálogos existentes.
+        }
+
+        function entrarMenuCatalogos() {
+            alert("Função para entrar no menu de catálogos será implementada aqui.");
+            // Adicione o código para redirecionar ou abrir o menu de catálogos existentes.
+        }
+    </script>
+</body>
+</html>
