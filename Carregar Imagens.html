@@ -91,13 +91,48 @@
             background: rgba(0, 0, 0, 0.5);
             z-index: 999;
         }
+
+        #menuCatalogos {
+            margin-top: 20px;
+            width: 80%;
+            max-width: 600px;
+            background-color: #fff;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        #menuCatalogos ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        #menuCatalogos li {
+            padding: 10px;
+            border-bottom: 1px solid #ccc;
+        }
+
+        #menuCatalogos li:last-child {
+            border-bottom: none;
+        }
+
+        #menuCatalogos a {
+            text-decoration: none;
+            color: #007bff;
+            transition: color 0.3s;
+        }
+
+        #menuCatalogos a:hover {
+            color: #0056b3;
+        }
     </style>
 </head>
 <body>
     <h1>Depósito de Imagens</h1>
     <div class="button-container">
         <button onclick="abrirFormularioCriarCatalogo()">Criar Catálogo</button>
-        <button onclick="entrarMenuCatalogos()">Menu de Catálogos</button>
+        <button onclick="mostrarMenuCatalogos()">Menu de Catálogos</button>
     </div>
 
     <div class="overlay" id="overlay"></div>
@@ -118,6 +153,11 @@
         <button onclick="fecharPopupCarregarImagens()">Cancelar</button>
     </div>
 
+    <div id="menuCatalogos" style="display: none;">
+        <h2>Catálogos Disponíveis</h2>
+        <ul id="listaCatalogos"></ul>
+    </div>
+
     <script>
         const ACCESS_TOKEN = "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";
         const REPO_OWNER = "Cardreaper";
@@ -134,19 +174,59 @@
             document.getElementById('popupFormulario').style.display = 'none';
         }
 
-        function gravarCatalogo() {
-            const titulo = document.getElementById('titulo').value;
-            const observacoes = document.getElementById('observacoes').value;
+        async function gravarCatalogo() {
+            const titulo = document.getElementById('titulo').value.trim();
+            const observacoes = document.getElementById('observacoes').value.trim();
 
-            if (titulo.trim() === "" || observacoes.trim() === "") {
+            if (titulo === "" || observacoes === "") {
                 alert("Por favor, preencha todos os campos.");
                 return;
             }
 
-            alert(`Catálogo '${titulo}' gravado com sucesso!`);
+            try {
+                // Criar pasta no repositório
+                const path = `imagens/${titulo}/.gitkeep`;
+                const response = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${path}`, {
+                    method: "PUT",
+                    headers: {
+                        "Authorization": `Bearer ${ACCESS_TOKEN}`,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        message: `Criando catálogo ${titulo}`,
+                        content: btoa(""), // Arquivo vazio
+                        branch: BRANCH
+                    })
+                });
 
-            fecharPopup();
-            abrirPopupCarregarImagens(titulo);
+                if (response.ok) {
+                    alert(`Catálogo '${titulo}' criado com sucesso!`);
+                    adicionarCatalogoMenu(titulo);
+                    fecharPopup();
+                    abrirPopupCarregarImagens(titulo);
+                } else {
+                    console.error("Erro ao criar catálogo:", await response.json());
+                    alert("Erro ao criar o catálogo. Tente novamente.");
+                }
+            } catch (error) {
+                console.error("Erro ao criar catálogo:", error);
+                alert("Erro ao criar o catálogo. Verifique sua conexão e tente novamente.");
+            }
+        }
+
+        function adicionarCatalogoMenu(titulo) {
+            const listaCatalogos = document.getElementById('listaCatalogos');
+            const li = document.createElement('li');
+            const link = document.createElement('a');
+            link.href = `#${titulo}`;
+            link.textContent = titulo;
+            li.appendChild(link);
+            listaCatalogos.appendChild(li);
+        }
+
+        function mostrarMenuCatalogos() {
+            const menu = document.getElementById('menuCatalogos');
+            menu.style.display = 'block';
         }
 
         function abrirPopupCarregarImagens(titulo) {
@@ -156,60 +236,3 @@
         }
 
         function fecharPopupCarregarImagens() {
-            document.getElementById('popupCarregarImagens').style.display = 'none';
-            document.getElementById('overlay').style.display = 'none';
-        }
-
-        async function uploadImagens() {
-            const titulo = document.getElementById('popupCarregarImagens').dataset.titulo;
-            const inputImagens = document.getElementById('inputImagens');
-
-            if (inputImagens.files.length === 0) {
-                alert("Nenhuma imagem selecionada.");
-                return;
-            }
-
-            for (const file of inputImagens.files) {
-                const reader = new FileReader();
-
-                reader.onload = async function (e) {
-                    const base64Content = e.target.result.split(',')[1];
-                    const path = `imagens/${titulo}/${file.name}`;
-
-                    try {
-                        const response = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${path}`, {
-                            method: "PUT",
-                            headers: {
-                                "Authorization": `Bearer ${ACCESS_TOKEN}`,
-                                "Content-Type": "application/json"
-                            },
-                            body: JSON.stringify({
-                                message: `Adicionando imagem ${file.name} ao catálogo ${titulo}`,
-                                content: base64Content,
-                                branch: BRANCH
-                            })
-                        });
-
-                        if (response.ok) {
-                            console.log(`Imagem ${file.name} carregada com sucesso.`);
-                        } else {
-                            console.error(`Erro ao carregar imagem ${file.name}:`, await response.json());
-                        }
-                    } catch (error) {
-                        console.error(`Erro ao carregar imagem ${file.name}:`, error);
-                    }
-                };
-
-                reader.readAsDataURL(file);
-            }
-
-            alert("Imagens carregadas com sucesso!");
-            fecharPopupCarregarImagens();
-        }
-
-        function entrarMenuCatalogos() {
-            alert("Função para entrar no menu de catálogos será implementada aqui.");
-        }
-    </script>
-</body>
-</html>
