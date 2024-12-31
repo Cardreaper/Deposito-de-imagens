@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Depósito de Imagens</title>
     <style>
-        /* Estilos existentes */
         body {
             font-family: Arial, sans-serif;
             background-color: #f4f4f4;
@@ -92,32 +91,16 @@
             background: rgba(0, 0, 0, 0.5);
             z-index: 999;
         }
-
-        .img-preview {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin-top: 10px;
-        }
-
-        .img-preview img {
-            max-width: 100px;
-            max-height: 100px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-        }
     </style>
 </head>
 <body>
     <h1>Depósito de Imagens</h1>
-    <div class="button-container" id="menuInicial">
+    <div class="button-container">
         <button onclick="abrirFormularioCriarCatalogo()">Criar Catálogo</button>
         <button onclick="entrarMenuCatalogos()">Menu de Catálogos</button>
     </div>
 
     <div class="overlay" id="overlay"></div>
-
-    <!-- Formulário de criação do catálogo -->
     <div class="popup" id="popupFormulario">
         <h2>Criar Catálogo</h2>
         <label for="titulo">Título:</label>
@@ -128,27 +111,27 @@
         <button onclick="fecharPopup()">Cancelar</button>
     </div>
 
-    <!-- Pop-up de carregamento de imagens -->
     <div class="popup" id="popupCarregarImagens">
         <h2>Carregar Imagens</h2>
-        <label for="inputImagens">Selecione as imagens:</label>
-        <input type="file" id="inputImagens" multiple accept="image/*" onchange="previewImagens()">
-        <div class="img-preview" id="imgPreview"></div>
-        <button onclick="finalizarCarregamento()">Carregar</button>
-        <button onclick="fecharPopup()">Cancelar</button>
+        <input type="file" id="inputImagens" multiple accept="image/*">
+        <button onclick="uploadImagens()">Carregar</button>
+        <button onclick="fecharPopupCarregarImagens()">Cancelar</button>
     </div>
 
     <script>
+        const ACCESS_TOKEN = "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";
+        const REPO_OWNER = "Cardreaper";
+        const REPO_NAME = "Deposito-de-imagens";
+        const BRANCH = "main";
+
         function abrirFormularioCriarCatalogo() {
-            document.getElementById('menuInicial').style.display = 'none';
             document.getElementById('overlay').style.display = 'block';
             document.getElementById('popupFormulario').style.display = 'block';
         }
 
         function fecharPopup() {
             document.getElementById('overlay').style.display = 'none';
-            document.querySelectorAll('.popup').forEach(popup => popup.style.display = 'none');
-            document.getElementById('menuInicial').style.display = 'flex';
+            document.getElementById('popupFormulario').style.display = 'none';
         }
 
         function gravarCatalogo() {
@@ -161,52 +144,71 @@
             }
 
             alert(`Catálogo '${titulo}' gravado com sucesso!`);
-            document.getElementById('popupFormulario').style.display = 'none';
+
+            fecharPopup();
             abrirPopupCarregarImagens(titulo);
         }
 
         function abrirPopupCarregarImagens(titulo) {
             document.getElementById('popupCarregarImagens').style.display = 'block';
             document.getElementById('overlay').style.display = 'block';
+            document.getElementById('popupCarregarImagens').dataset.titulo = titulo;
         }
 
-        function previewImagens() {
-            const input = document.getElementById('inputImagens');
-            const previewContainer = document.getElementById('imgPreview');
-            previewContainer.innerHTML = "";
-
-            const files = input.files;
-            if (files.length > 0) {
-                Array.from(files).forEach(file => {
-                    const reader = new FileReader();
-                    reader.onload = function (e) {
-                        const img = document.createElement('img');
-                        img.src = e.target.result;
-                        previewContainer.appendChild(img);
-                    };
-                    reader.readAsDataURL(file);
-                });
-            }
+        function fecharPopupCarregarImagens() {
+            document.getElementById('popupCarregarImagens').style.display = 'none';
+            document.getElementById('overlay').style.display = 'none';
         }
 
-        function finalizarCarregamento() {
-            const input = document.getElementById('inputImagens');
-            const files = input.files;
+        async function uploadImagens() {
+            const titulo = document.getElementById('popupCarregarImagens').dataset.titulo;
+            const inputImagens = document.getElementById('inputImagens');
 
-            if (files.length === 0) {
+            if (inputImagens.files.length === 0) {
                 alert("Nenhuma imagem selecionada.");
                 return;
             }
 
-            const nomesImagens = Array.from(files).map(file => file.name).join(", ");
-            alert(`Imagens carregadas com sucesso: ${nomesImagens}`);
-            fecharPopup();
-            // Adicione o catálogo ao menu de catálogos existentes.
+            for (const file of inputImagens.files) {
+                const reader = new FileReader();
+
+                reader.onload = async function (e) {
+                    const base64Content = e.target.result.split(',')[1];
+                    const path = `imagens/${titulo}/${file.name}`;
+
+                    try {
+                        const response = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${path}`, {
+                            method: "PUT",
+                            headers: {
+                                "Authorization": `Bearer ${ACCESS_TOKEN}`,
+                                "Content-Type": "application/json"
+                            },
+                            body: JSON.stringify({
+                                message: `Adicionando imagem ${file.name} ao catálogo ${titulo}`,
+                                content: base64Content,
+                                branch: BRANCH
+                            })
+                        });
+
+                        if (response.ok) {
+                            console.log(`Imagem ${file.name} carregada com sucesso.`);
+                        } else {
+                            console.error(`Erro ao carregar imagem ${file.name}:`, await response.json());
+                        }
+                    } catch (error) {
+                        console.error(`Erro ao carregar imagem ${file.name}:`, error);
+                    }
+                };
+
+                reader.readAsDataURL(file);
+            }
+
+            alert("Imagens carregadas com sucesso!");
+            fecharPopupCarregarImagens();
         }
 
         function entrarMenuCatalogos() {
             alert("Função para entrar no menu de catálogos será implementada aqui.");
-            // Adicione o código para redirecionar ou abrir o menu de catálogos existentes.
         }
     </script>
 </body>
